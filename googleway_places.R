@@ -1,49 +1,46 @@
-library(googleway)
-library(leaflet)
+library(jsonlite)
+library(httr)
+library(reshape2)
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(foreach)
+library(data.table)
+library(dtplyr)
 
-# https://developers.google.com/places/supported_types
-# https://github.com/SymbolixAU/googleway
+places_key <- "AIzaSyAeAw1J7pSGnEY-QwsIWabG6xV_DyeCPkc"
+geocode_key <- "AIzaSyBcjA4tAtkNCp-zxx04RSIpGFBZcmo7dt4"
 
-df <- google_geocode(address = "Hampton 3188",
+suburb <- google_geocode(address = "Hampton 3188",
                      key = geocode_key,
                      simplify = TRUE)
 
-df$results$geometry$location
+lon <- suburb$results$geometry$location$lng
+lat <- suburb$results$geometry$location$lat
+radius <- 50000
+type <- "cafe"
 
-places_key <- "AIzaSyBY7jbzD3onwbPhDwe6IJLdhZ57ysVRcpY"
-geocode_key <- "AIzaSyAI4ruKKXSucmmlgXjkzGFIbbpGc4PkcP4"
-location <- c(df$results$geometry$location$lat, df$results$geometry$location$lng)
-place_type <- "cafe"
-counter <- 1
-radius <- 2000
-file <- "temp/file.csv"
+url <- paste("https://maps.googleapis.com/maps/api/place/radarsearch/json?location=",lat,",",lon,"&radius=",radius,"&type=",type,"&key=",places_key, sep = "")
+req <- GET(url)
+req_df <- fromJSON(content(req, type = "text", encoding = "UTF-8"))
+location_data <- data.frame(cbind(req_df$results$place_id))
+# write.table(location_data,file = "radar-data.csv", sep = ",", row.names = FALSE)
 
-res <- google_places(location = location,
-                          place_type = place_type,
-                          radius = radius,
-                          key = places_key)
-x <- as.data.frame(cbind(res$results$name, res$results$geometry$location, res$results$rating))
-write.table(x,file = file, sep = ",", row.names = FALSE)
+places <- as.list(req_df$results$place_id)
 
-page <- res$next_page_token
+simplefunc <- function(place){
+  place_url <- paste("https://maps.googleapis.com/maps/api/place/details/json?placeid=",place,"&key=",places_key, sep = "")
+  request <- GET(place_url)
+  request_json <- fromJSON(content(request, type = "text", encoding = "UTF-8"))
+  place_data <- data.frame(request_json$result$id,request_json$result$formatted_address, request_json$result$name, request_json$result$geometry$location$lat, request_json$result$geometry$location$lng)
+}
 
-while (is.null(page) != TRUE) {
-                res <- google_places(location = location,
-                     place_type = place_type,
-                     radius = radius,
-                     page_token = page,
-                     key = places_key)
-                     page <- res$next_page_token
-                     counter <- counter + 1
-                     x <- as.data.frame(cbind(res$results$name, res$results$geometry$location, res$results$rating))
-                     write.table(x, file = file, row.names = FALSE, append = TRUE, col.names = FALSE, sep = ",")
-            }
+data <- lapply(places, FUN = simplefunc)
+dataframe <- ldply(data, data.frame)
 
+write.table(dataframe, file = "radar-data.csv", sep = ",")
 
-  # cbind(res$results$name, res$results$geometry$location, res$results$rating)
-#
-#
-# res <- google_places(search_string = "Densist in Richmond, Australia",
-#                      key = key)
-#
-# cbind(res$results$name, res$results$opening_hours)
+place_url <- paste("https://maps.googleapis.com/maps/api/place/details/json?placeid=ChIJs-Q2IlNd1moRWMeetOC96a8&key=",places_key, sep = "") 
+request <- GET(place_url)
+request_json <- fromJSON(content(request, type = "text", encoding = "UTF-8"))
+place_data <- data.frame(request_json$result$id,request_json$result$rating)
