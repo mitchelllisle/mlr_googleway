@@ -5,3 +5,5 @@ R Script for:
 - Search for results using a radius and type using the google-places API 
 - Search for those individual places using the google-places details API
 - Save as a CSV file
+
+TODO: Add messages and error handling
