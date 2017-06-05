@@ -7,8 +7,8 @@ library(googleway)
 library(jsonlite)
 library(progress)
 
-places_key <- "AIzaSyAeAw1J7pSGnEY-QwsIWabG6xV_DyeCPkc"
-geocode_key <- "AIzaSyBcjA4tAtkNCp-zxx04RSIpGFBZcmo7dt4"
+places_key <- ""
+geocode_key <- ""
 radius <- 2000
 type <- "bank"
 address <- "South Yarra, 3141, Vic"
